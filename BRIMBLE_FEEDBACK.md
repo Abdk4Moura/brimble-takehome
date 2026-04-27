@@ -107,6 +107,41 @@ command, not ship a no-op container.)
 them? It might just be `NODE_ENV`, but a user shouldn't have to guess.
 Show the keys (not values) right there in the build log.
 
+### 6. Mise hits GitHub unauthenticated and rate-limits the whole platform
+
+When I deployed `brimble-hello` (a 90-line npm-only Node service), the build
+failed at `mise install` with:
+
+```
+Failed to install aqua:pnpm/pnpm@10.33.2: HTTP status client error
+(403 rate limit exceeded) for url
+(https://api.github.com/repos/pnpm/pnpm/releases/tags/10.33.2)
+```
+
+Two compounding problems here:
+
+- **Railpack provisions pnpm even when the project uses npm.** The same
+  build's plan output says `↳ Using npm package manager` — and one line
+  later, `pnpm  │  10.33.2  │  custom config (latest)`. My
+  `package.json` has no pnpm reference. Looks like Brimble's Railpack
+  config installs pnpm unconditionally as a "supported" tool, which
+  doubles the GitHub API surface for every Node deploy that doesn't need
+  it.
+- **Mise calls the GitHub API anonymously.** GitHub's unauthenticated
+  rate limit is 60 req/hr per IP. On a shared runner that's almost
+  always exhausted. Set `GITHUB_TOKEN` (or `GH_TOKEN`) in the build
+  environment and mise will use it — that's a 5,000/hr ceiling, which is
+  the difference between "deploys flake on Tuesday" and "deploys never
+  flake on this axis again."
+
+Bonus: when mise *did* warn — `mise WARN GitHub rate limit exceeded.
+Resets at 2026-04-27 23:45:42` — that warning was the actual root cause
+of the failure 1.2 seconds later, but it was rendered indistinguishably
+from the dozens of other lines. Catching it and surfacing
+"Rate-limited by GitHub. Retry after 23:45 UTC, or contact support to
+configure a token" would save the user from re-reading the whole
+buildlog trying to figure out what `aqua:pnpm/pnpm` even is.
+
 ## What's nice
 
 - **Generated app names** (`brimble-takehome-vocal-skilled`) are charming
