@@ -126,6 +126,6 @@ export function readLogsSince(
 }
 
 function shortId() {
-  // 8 chars from a UUID — readable and DNS-safe.
+  // 8 chars from a UUID, readable and DNS-safe.
   return randomUUID().replace(/-/g, "").slice(0, 8);
 }

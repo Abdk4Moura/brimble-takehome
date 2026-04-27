@@ -8,10 +8,9 @@
 
 ## Notes
 
-_This file is a placeholder — the actual write-up gets added once the deploy
-goes through. The job description is explicit: empty feedback loses points,
-polite feedback also loses points. Be specific, point at the friction, name
-the file/screen where the friction happened._
+_Placeholder. Replace with the real write-up after the deploy. Be specific:
+name the screen, name the file, name the click that didn't do what it
+looked like it would do._
 
 Sketch of what to cover:
 

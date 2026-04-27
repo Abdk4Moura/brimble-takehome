@@ -29,7 +29,7 @@ export async function streamLogs(
   );
   let cursor = Number.isFinite(lastIdNum) ? lastIdNum : 0;
 
-  // Drain in pages of 5000 — see selectLogs LIMIT.
+  // Drain in pages of 5000 (matches the LIMIT in selectLogs).
   // eslint-disable-next-line no-constant-condition
   while (true) {
     const page = readLogsSince(deploymentId, cursor);

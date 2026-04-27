@@ -15,8 +15,8 @@ services:
       - caddy-config:/config
     ports:
       - "${PUBLIC_PORT:-8080}:80"
-      # Admin port intentionally not published — only api on brimble-net
-      # talks to it.
+      # Admin port intentionally not published; only the api (on brimble-net)
+      # needs to reach it.
 
   buildkit:
     image: moby/buildkit:v0.16.0
@@ -50,7 +50,7 @@ services:
       BUILDKIT_HOST: docker-container://brimble-buildkit
     volumes:
       # Docker socket: needed to run railpack-built images and to stream
-      # container logs. Trade-off documented in the README.
+      # container logs. See README for the security note.
       - /var/run/docker.sock:/var/run/docker.sock
       - api-data:/data
 

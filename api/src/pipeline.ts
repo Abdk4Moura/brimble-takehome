@@ -180,7 +180,7 @@ async function stopAndRemoveIfExists(name: string, sink: LogSink) {
     sink.system(`removing existing container ${name}`);
     await c.remove({ force: true }).catch(() => {});
   } catch {
-    // not found — fine
+    // not found, that's fine
   }
 }
 
@@ -195,8 +195,8 @@ async function streamContainerLogs(
     stderr: true,
     tail: 0,
   });
-  // Docker multiplexes stdout/stderr in a 8-byte header frame format. dockerode
-  // exposes demuxStream — we hand it two simple sinks.
+  // Docker multiplexes stdout/stderr with an 8-byte frame header; dockerode's
+  // demuxStream splits them apart for us.
   const stdout = {
     write: (b: Buffer) => {
       sink.write(b, "info");

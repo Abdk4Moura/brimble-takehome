@@ -27,6 +27,6 @@ export async function reconcile() {
     }
   }
   await syncCaddy().catch(() => {
-    // First sync may race with caddy startup — server.ts retries via syncCaddyWithRetry.
+    // First sync can race with caddy startup; server.ts retries via syncCaddyWithRetry.
   });
 }

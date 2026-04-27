@@ -1,9 +1,9 @@
 # brimble-takehome
 
-A one-page deployment pipeline. Submit a Git URL or a `.tar.gz`, watch
-[Railpack](https://railpack.com) build it into an OCI image, run the image as
-a container, and reach it through Caddy at `/d/<id>/`. Build and runtime logs
-stream live to the UI over SSE.
+One-page deploy pipeline. Submit a Git URL or a `.tar.gz`. The api uses
+[Railpack](https://railpack.com) to build an OCI image, runs the image as a
+container, and routes traffic to it through Caddy at `/d/<id>/`. Build and
+runtime logs stream live to the UI over SSE.
 
 ```
 ┌─ browser ──────────────────────────────────────┐
@@ -80,17 +80,19 @@ docker-compose.yml
 
 ### Pipeline (`api/src/pipeline.ts`)
 
-1. Materialise source — `git clone --depth 1` or extract uploaded tarball into
-   `/data/builds/<id>`.
+1. Pull the source. `git clone --depth 1` for a Git URL, or extract the
+   uploaded tarball into `/data/builds/<id>`.
 2. `railpack build --name brimble-deploy/<id>:latest /data/builds/<id>`.
-   Railpack speaks BuildKit at `docker-container://brimble-buildkit` and loads
-   the resulting image into the host Docker daemon (mounted socket).
-3. Start the container on the `brimble-net` network with `PORT=3000`. Replace
-   any container with the same name (so redeploys are idempotent).
-4. Push a fresh Caddy config — every running deployment becomes a route
+   Railpack speaks BuildKit at `docker-container://brimble-buildkit` and
+   loads the resulting image into the host Docker daemon (mounted socket).
+3. Start the container on the `brimble-net` network with `PORT=3000`. If a
+   container with the same name already exists, replace it, so redeploys are
+   idempotent.
+4. Push a fresh Caddy config. Every running deployment becomes a route
    `/d/<id>/* → <container>:3000` with the prefix stripped.
-5. Tail container stdout/stderr (multiplexed via `dockerode.demuxStream`) into
-   the same log table so the UI shows app output alongside build output.
+5. Tail container stdout/stderr (multiplexed via `dockerode.demuxStream`)
+   into the same log table so the UI shows app output alongside build
+   output.
 
 State machine: `pending → building → deploying → running` (or `failed`).
 `stopped` is reserved for explicit deletes.
@@ -113,9 +115,8 @@ than only after they finish.
 
 Caddy boots from a Caddyfile that returns 503 on `:80` and exposes the admin
 API on `:2019`. The api takes over by `POST /load`-ing a JSON config built
-from the current DB state. Same path runs on every deployment change *and*
-on api boot — so there's exactly one place that decides what the routing
-table looks like.
+from the current DB state. Same code path runs on every deployment change
+and on api boot, so the routing table has exactly one source.
 
 ### Reconciliation (`api/src/reconcile.ts`)
 
@@ -126,29 +127,29 @@ without any manual step.
 
 ## Decisions worth calling out
 
-- **Single source of truth for routing.** The api always pushes the *full*
-  Caddy config, never a patch. PATCH/PUT-by-id is fewer bytes but the math
-  for "what should the routing table look like" lives in one place this way,
-  and it's already cheap (a few KB per change).
-- **`node:sqlite` over `better-sqlite3`.** Built-in to Node 24, zero native
-  build step, half the footprint. The synchronous API is fine for our write
-  volume.
-- **No auth, no multi-tenancy.** The brief explicitly excluded these.
-- **Docker socket mount, not Docker-in-Docker.** Simpler, faster, and
-  correct given this runs on a trusted machine. The `api` container is the
-  trust boundary — anything that breaks out of it has the host. For the
-  product, you'd want a least-privilege buildkitd worker and a signed RPC
-  rather than `/var/run/docker.sock`.
+- **Full-config Caddy reloads, not patches.** The api always POSTs the
+  whole config to `/load`. PATCH-by-id is fewer bytes, but generating the
+  whole table from DB state means one code path covers boot, redeploy, and
+  delete. It's a few KB per change, nobody cares.
+- **`node:sqlite` instead of `better-sqlite3`.** Built into Node 24, no
+  native build step, half the footprint. The sync API is fine for the
+  write volume here.
+- **No auth, no multi-tenancy.** The brief excluded these.
+- **Docker socket mount, not Docker-in-Docker.** Simpler and faster; the
+  `api` container becomes the trust boundary. Fine for a take-home running
+  on a laptop. In production you'd want a least-privilege buildkitd worker
+  with an RPC interface instead of `/var/run/docker.sock`.
 - **Path-prefix routing (`/d/<id>/`) instead of subdomains.** Subdomains
-  need wildcard DNS or `/etc/hosts` edits, and the brief is "we'll run it on
-  our laptops". Apps that emit absolute URLs in HTML will break — that's a
-  documented trade-off, fixable by switching to `<id>.localhost`.
-- **Hard-coded app port (3000) with `PORT=3000` injected.** Most node/python
-  apps respect `$PORT`. A more general system would expose the port as a
-  field on the deployment and probe with a TCP healthcheck.
-- **In-memory pubsub for logs.** Cheap, exactly-once-per-listener, but
-  scoped to a single api instance. Real Brimble would put NATS or Redis
-  behind this so a UI can connect to any api node and still see logs.
+  need wildcard DNS or `/etc/hosts`. The brief is "we'll run it on our
+  laptops" so I picked the version that just works. Apps that emit absolute
+  asset URLs in HTML will break under a path prefix; fixable by switching
+  to `<id>.localhost`.
+- **Hard-coded app port (3000) with `PORT=3000` injected.** Most
+  node/python apps respect `$PORT`. A more general system would let the
+  user declare it and probe with a TCP healthcheck.
+- **In-memory pubsub for logs.** Scoped to a single api instance. Real
+  Brimble would put NATS or Redis behind this so any UI can attach to any
+  api node.
 
 ## What I'd do with another weekend
 
@@ -162,20 +163,19 @@ without any manual step.
 - **Zero-downtime redeploys.** Stop-then-start has a ~1s gap. Start the new
   container under a different name, swap the Caddy upstream, then GC the
   old one.
-- **Resource limits.** No `Memory`/`CpuQuota` on the deployed containers —
-  one bad app can pin the host.
+- **Resource limits.** No `Memory`/`CpuQuota` on the deployed containers,
+  so one bad app can pin the host.
 - **Subdomain routing as an option.** `<id>.localhost` is supported by
   every modern resolver and avoids the path-prefix asset-URL problem.
 
 ## What I'd rip out
 
-- The frontend ships its own Caddy. It's there to keep the dev story simple
-  (`docker compose up` and you're done) but is otherwise dead weight — the
-  ingress Caddy could `file_server` the built assets directly, dropping a
-  whole container.
-- `LogSink` does its own line-splitting because dockerode emits chunks.
-  Node's `readline` would do this with less code; I wrote it bespoke
-  because I wanted control over how partial lines flush at the end.
+- The frontend ships its own Caddy. It's there to keep `docker compose up`
+  trivial, but the ingress Caddy could `file_server` the built assets
+  directly, dropping a whole container.
+- `LogSink` does its own line-splitting because dockerode emits chunks
+  mid-line. Node's `readline` would do this with less code; I wrote it
+  bespoke to control how the trailing partial line flushes.
 
 ## API surface
 
