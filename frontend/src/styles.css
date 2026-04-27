@@ -1,0 +1,153 @@
+:root {
+  --bg: #0b0d10;
+  --panel: #14171c;
+  --panel-2: #1c2026;
+  --border: #2a2f37;
+  --text: #e7ecef;
+  --muted: #8b95a3;
+  --accent: #5dd6a1;
+  --accent-2: #5db0ff;
+  --warn: #f5b85c;
+  --err: #ef6b6b;
+  font-family:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--text); }
+
+a { color: var(--accent-2); }
+button {
+  font: inherit;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+button:hover { border-color: #3a414c; }
+button.primary {
+  background: var(--accent);
+  color: #0b0d10;
+  border-color: transparent;
+  font-weight: 600;
+}
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+input[type="text"], input[type="url"], input[type="file"] {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 8px 10px;
+  border-radius: 6px;
+  width: 100%;
+  font: inherit;
+}
+
+.app {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+.app h1 {
+  grid-column: 1 / -1;
+  margin: 0 0 8px 0;
+  font-size: 22px;
+}
+.app .sub {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  margin-top: -4px;
+  font-size: 13px;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.panel h2 { margin: 0; font-size: 14px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+
+.row { display: flex; gap: 8px; align-items: center; }
+.col { display: flex; flex-direction: column; gap: 6px; }
+
+.deps { display: flex; flex-direction: column; gap: 8px; max-height: 540px; overflow: auto; }
+.dep {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  cursor: pointer;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.dep:hover { border-color: #3a414c; }
+.dep.selected { border-color: var(--accent); }
+.dep .name { font-weight: 600; font-size: 14px; }
+.dep .meta { color: var(--muted); font-size: 12px; word-break: break-all; }
+.dep .row-foot { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+
+.status {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.status.pending, .status.building, .status.deploying { color: var(--warn); border-color: #4a3d22; background: #2a2113; }
+.status.running { color: var(--accent); border-color: #1f4937; background: #0e2c20; }
+.status.failed { color: var(--err); border-color: #4a2222; background: #2a1313; }
+.status.stopped { color: var(--muted); }
+
+.logs {
+  background: #07090b;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family:
+    ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  height: 540px;
+  overflow: auto;
+  padding: 8px 10px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.logs .l { padding: 1px 0; line-height: 1.45; }
+.logs .l.system { color: var(--accent-2); }
+.logs .l.error { color: var(--err); }
+.logs .l .ts { color: var(--muted); margin-right: 8px; }
+.logs .l .stream {
+  display: inline-block;
+  width: 50px;
+  color: var(--muted);
+  margin-right: 8px;
+}
+
+.empty { color: var(--muted); font-size: 13px; padding: 12px 0; text-align: center; }
+
+.url-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  background: var(--panel-2);
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+.image-tag { font-family: ui-monospace, monospace; font-size: 11px; color: var(--muted); }
+
+.danger { color: var(--err); border-color: #4a2222; }
+.danger:hover { border-color: var(--err); }

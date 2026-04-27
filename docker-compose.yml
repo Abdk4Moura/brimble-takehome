@@ -1,0 +1,75 @@
+name: brimble-takehome
+
+# Single ingress on :8080 (host) -> caddy:80 (container).
+# Caddy fronts the frontend, the api, and every deployed container.
+
+services:
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    networks:
+      - brimble-net
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    ports:
+      - "${PUBLIC_PORT:-8080}:80"
+      # Admin port intentionally not published — only api on brimble-net
+      # talks to it.
+
+  buildkit:
+    image: moby/buildkit:v0.16.0
+    restart: unless-stopped
+    privileged: true
+    # Hostname is what railpack dials with docker-container://
+    # (BUILDKIT_HOST is set on the api container).
+    container_name: brimble-buildkit
+    networks:
+      - brimble-net
+    volumes:
+      - buildkit-cache:/var/lib/buildkit
+
+  api:
+    build:
+      context: ./api
+    restart: unless-stopped
+    depends_on:
+      - caddy
+      - buildkit
+    networks:
+      - brimble-net
+    environment:
+      PORT: 3000
+      DATA_DIR: /data
+      BUILDS_DIR: /data/builds
+      CADDY_ADMIN_URL: http://caddy:2019
+      DEPLOY_NETWORK: brimble-takehome_brimble-net
+      DEFAULT_APP_PORT: 3000
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
+      BUILDKIT_HOST: docker-container://brimble-buildkit
+    volumes:
+      # Docker socket: needed to run railpack-built images and to stream
+      # container logs. Trade-off documented in the README.
+      - /var/run/docker.sock:/var/run/docker.sock
+      - api-data:/data
+
+  frontend:
+    build:
+      context: ./frontend
+    restart: unless-stopped
+    networks:
+      - brimble-net
+    depends_on:
+      - api
+
+networks:
+  brimble-net:
+    name: brimble-takehome_brimble-net
+    driver: bridge
+
+volumes:
+  caddy-data:
+  caddy-config:
+  buildkit-cache:
+  api-data:

@@ -1,0 +1,14 @@
+{
+	# Bind admin to all interfaces inside the caddy container so the api
+	# service can push config via http://caddy:2019/load. The container is
+	# only on the brimble-net network — not exposed on the host.
+	admin 0.0.0.0:2019
+	auto_https off
+}
+
+# Boot config — the api takes over with a JSON config from /api/...
+# at startup (and on every deployment change). Until that happens we
+# return a friendly placeholder so curl-checks and browser hits don't error.
+:80 {
+	respond "brimble-takehome: caddy up, api still booting" 503
+}
