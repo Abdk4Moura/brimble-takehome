@@ -33,9 +33,12 @@ stream live to the UI over SSE.
 ## Run it
 
 ```bash
-docker compose up --build
+docker compose up
 # open http://localhost:8080
 ```
+
+First run builds the `api` and `frontend` images locally (~2–3 min cold).
+Subsequent runs are warm. Pass `--build` after editing source.
 
 Defaults are wired so nothing has to be configured. `.env` overrides:
 
